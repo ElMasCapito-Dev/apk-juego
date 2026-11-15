@@ -43,15 +43,24 @@ jobs:
           echo "android.ndk = 25b" >> buildozer.spec
           echo "android.accept_sdk_license = True" >> buildozer.spec
 
-      - name: Accept Licenses
+      - name: Force Install Android SDK
         run: |
-          mkdir -p ~/.android
-          touch ~/.android/repositories.cfg
-          yes | sdkmanager --licenses || true
+          # Descargamos el SDK manualmente para saltarnos la pregunta de Buildozer
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $ANDROID_HOME
+          cd $ANDROID_HOME
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/bin cmdline-tools/lib cmdline-tools/source.properties cmdline-tools/latest/
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          yes | sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" --sdk_root=$ANDROID_HOME
           
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:~/.local/bin
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
           buildozer -v android debug
           
       - name: Upload APK
