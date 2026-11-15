@@ -3,38 +3,55 @@ name: Build APK
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
   build-android:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Cache Buildozer
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-
-      - name: Install dependencies
+      - name: Crear buildozer.spec
         run: |
-          sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev libltdl-dev
-          pip install --upgrade buildozer cython==0.29.36
+          echo "[app]" > buildozer.spec
+          echo "title = Anime Multiverse" >> buildozer.spec
+          echo "package.name = animemultiverse" >> buildozer.spec
+          echo "package.domain = org.mitol" >> buildozer.spec
+          echo "source.dir = ." >> buildozer.spec
+          echo "source.include_exts = py,png,jpg,kv,atlas,json" >> buildozer.spec
+          echo "version = 1.0" >> buildozer.spec
+          echo "requirements = python3==3.10.12,kivy==2.3.0,hostpython3==3.10.12,pyjnius==1.5.0,pygame" >> buildozer.spec
+          echo "orientation = landscape" >> buildozer.spec
+          echo "fullscreen = 0" >> buildozer.spec
+          echo "[buildozer]" >> buildozer.spec
+          echo "log_level = 2" >> buildozer.spec
+          echo "warn_on_root = 1" >> buildozer.spec
+          echo "[app:android]" >> buildozer.spec
+          echo "android.archs = arm64-v8a" >> buildozer.spec
+          echo "android.api = 33" >> buildozer.spec
+          echo "android.minapi = 21" >> buildozer.spec
+          echo "android.ndk = 25b" >> buildozer.spec
+          echo "android.accept_sdk_license = True" >> buildozer.spec
 
-      - name: Build with Buildozer
+      # 👇 AQUÍ ESTÁ LA MAGIA 👇
+      - name: Aceptar Licencias de Android
         run: |
-          export PATH=$PATH:~/.local/bin
+          mkdir -p /root/.android
+          touch /root/.android/repositories.cfg
+          # Forzamos la aceptación con sdkmanager
+          yes | sdkmanager --licenses || true
+          # A veces sdkmanager no está en el PATH del contenedor, así que buscamos en la ruta de Android SDK
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Compilar APK con Buildozer
+        timeout-minutes: 45
+        env:
+          BUILDOZER_WARN_ON_ROOT: 0
+        run: |
           buildozer -v android debug
 
-      - name: Upload APK
+      - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
           name: Mi-Juego-APK
