@@ -30,7 +30,10 @@ jobs:
           echo "source.dir = ." >> buildozer.spec
           echo "source.include_exts = py,png,jpg,kv,atlas,json" >> buildozer.spec
           echo "version = 1.0" >> buildozer.spec
-          echo "requirements = python3==3.10.12,kivy==2.3.0,hostpython3==3.10.12,pyjnius==1.5.0,pygame" >> buildozer.spec
+          
+          # AQUÍ ESTÁ EL ARREGLO: Usamos pyjnius desde GitHub en vez de la versión 1.5.0
+          echo "requirements = python3==3.10.12,kivy==2.3.0,hostpython3==3.10.12,pyjnius @ git+https://github.com/kivy/pyjnius.git@master,pygame" >> buildozer.spec
+          
           echo "orientation = landscape" >> buildozer.spec
           echo "fullscreen = 0" >> buildozer.spec
           echo "[buildozer]" >> buildozer.spec
@@ -49,7 +52,6 @@ jobs:
           mkdir -p $ANDROID_HOME
           cd $ANDROID_HOME
           
-          # Descargar las herramientas de línea de comandos de Android
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
           mkdir -p cmdline-tools/latest
@@ -57,10 +59,8 @@ jobs:
           
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
           
-          # Aceptar licencias e instalar herramientas base
           yes | sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" --sdk_root=$ANDROID_HOME
           
-          # EL TRUCO FINAL: Crear la carpeta y el enlace simbólico que Buildozer está buscando
           mkdir -p $ANDROID_HOME/tools/bin
           ln -s $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
           
