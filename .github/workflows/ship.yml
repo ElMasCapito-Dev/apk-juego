@@ -43,24 +43,33 @@ jobs:
           echo "android.ndk = 25b" >> buildozer.spec
           echo "android.accept_sdk_license = True" >> buildozer.spec
 
-      - name: Force Install Android SDK
+      - name: Force Install Android SDK and Fix Paths
         run: |
-          # Descargamos el SDK manualmente para saltarnos la pregunta de Buildozer
           export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $ANDROID_HOME
           cd $ANDROID_HOME
+          
+          # Descargar las herramientas de línea de comandos de Android
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
           mkdir -p cmdline-tools/latest
           mv cmdline-tools/bin cmdline-tools/lib cmdline-tools/source.properties cmdline-tools/latest/
+          
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          
+          # Aceptar licencias e instalar herramientas base
           yes | sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" --sdk_root=$ANDROID_HOME
+          
+          # EL TRUCO FINAL: Crear la carpeta y el enlace simbólico que Buildozer está buscando
+          mkdir -p $ANDROID_HOME/tools/bin
+          ln -s $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
           
       - name: Build with Buildozer
         run: |
           export PATH=$PATH:~/.local/bin
           export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          export PATH=$PATH:$ANDROID_HOME/tools/bin
           buildozer -v android debug
           
       - name: Upload APK
